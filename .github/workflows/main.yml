@@ -11,88 +11,84 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Set up JDK 11
-      uses: actions/setup-java@v2
-      with:
-        java-version: '11'
-        distribution: 'adopt'
+      - name: Set up JDK 11
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+          distribution: 'adopt'
 
-    - name: Build with Maven
-      run: mvn -f WebGoat-main/pom.xml clean install
+      - name: Build with Maven
+        run: mvn -f WebGoat-main/pom.xml clean install
 
-    - name: Run tests
-      run: mvn test
+      - name: Run tests
+        run: mvn -f WebGoat-main/pom.xml test
 
-    - name: Login to Docker Hub
-      run: echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN 
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
 
-    - name: Build Docker image
-      run: docker build -t ${{ secrets.DOCKER_HUB_USE
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/webgoat:latest WebGoat-main/
 
-    - name: Scan Docker image with Trivy
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: ${{ secrets.DOCKER_HUB_USERNAME }}
-        format: 'sarif'
-        output: 'trivy-results.sarif'
+      - name: Scan Docker image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ secrets.DOCKER_HUB_USERNAME }}/webgoat:latest
+          format: 'sarif'
+          output: 'trivy-results.sarif'
 
-    - name: Upload Trivy results to GitHub Security
-      uses: github/codeql-action/upload-sarif@v2
-      with:
-        sarif_file: trivy-results.sarif
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: trivy-results.sarif
 
-    - name: Push Docker image
-      run: docker push ${{ secrets.DOCKER_HUB_USERNAM
+      - name: Push Docker image
+        run: docker push ${{ secrets.DOCKER_HUB_USERNAME }}/webgoat:latest
 
-    - name: Set up Kubeconfig
-      run: echo "${{ secrets.KUBE_CONFIG }}" > $HOME/
+      - name: Set up Kubeconfig
+        run: echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > $HOME/.kube/config
 
-    - name: Deploy to Kubernetes
-      run: |
-        kubectl apply -f k8s/webgoat-deployment.yml
-        kubectl apply -f k8s/webgoat-service.yml
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f k8s/webgoat-deployment.yml
+          kubectl apply -f k8s/webgoat-service.yml
 
   security:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Set up Dependabot
-      run: |
-        mkdir -p .github/dependabot
-        echo "version: 2" > .github/dependabot.yml
-        echo "updates:" >> .github/dependabot.yml
-        echo "  - package-ecosystem: \"maven\"" >> .g
-        echo "    directory: \"/\"" >> .github/depend
-        echo "    schedule:" >> .github/dependabot.ym
-        echo "      interval: \"daily\"" >> .github/d
+      - name: Set up Dependabot
+        run: |
+          mkdir -p .github/dependabot
+          echo "version: 2" > .github/dependabot.yml
+          echo "updates:" >> .github/dependabot.yml
+          echo "  - package-ecosystem: 'maven'" >> .github/dependabot.yml
+          echo "    directory: '/'" >> .github/dependabot.yml
+          echo "    schedule:" >> .github/dependabot.yml
+          echo "      interval: 'daily'" >> .github/dependabot.yml
 
-    - name: Run OWASP ZAP
-      uses: zaproxy/action-full-scan@v0.4.1
-      with:
-        target: 'http://localhost:8080'
-        cmd_options: '-a -m 10 -r zap_report.html -J 
+      - name: Run OWASP ZAP
+        uses: zaproxy/action-full-scan@v0.4.1
+        with:
+          target: 'http://localhost:8080'
+          cmd_options: '-a -m 10 -r zap_report.html -J zap_report.json'
 
-    - name: Convert ZAP report to SARIF
-      run: |
-        npx zap-to-sarif -i zap_report.json -o zap_re
+      - name: Convert ZAP report to SARIF
+        run: npx zap-to-sarif -i zap_report.json -o zap_report.sarif
 
-    - name: Upload ZAP results to GitHub Security
-      uses: github/codeql-action/upload-sarif@v2
-      with:
-        sarif_file: zap_report.sarif
+      - name: Upload ZAP results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: zap_report.sarif
 
   notify:
     runs-on: ubuntu-latest
     needs: [build, security]
-
     steps:
-    - name: Send notification
-      run: echo "Build and security checks complete."
+      - name: Send notification
+        run: echo "Build and security checks complete."
