@@ -23,21 +23,21 @@ jobs:
         distribution: 'adopt'
 
     - name: Build with Maven
-      run: mvn clean install
+      run: mvn -f WebGoat-main/pom.xml clean install
 
     - name: Run tests
       run: mvn test
 
     - name: Login to Docker Hub
-      run: echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
+      run: echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN 
 
     - name: Build Docker image
-      run: docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/webgoat .
+      run: docker build -t ${{ secrets.DOCKER_HUB_USE
 
     - name: Scan Docker image with Trivy
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: ${{ secrets.DOCKER_HUB_USERNAME }}/webgoat
+        image-ref: ${{ secrets.DOCKER_HUB_USERNAME }}
         format: 'sarif'
         output: 'trivy-results.sarif'
 
@@ -47,10 +47,10 @@ jobs:
         sarif_file: trivy-results.sarif
 
     - name: Push Docker image
-      run: docker push ${{ secrets.DOCKER_HUB_USERNAME }}/webgoat
+      run: docker push ${{ secrets.DOCKER_HUB_USERNAM
 
     - name: Set up Kubeconfig
-      run: echo "${{ secrets.KUBE_CONFIG }}" > $HOME/.kube/config
+      run: echo "${{ secrets.KUBE_CONFIG }}" > $HOME/
 
     - name: Deploy to Kubernetes
       run: |
@@ -69,20 +69,20 @@ jobs:
         mkdir -p .github/dependabot
         echo "version: 2" > .github/dependabot.yml
         echo "updates:" >> .github/dependabot.yml
-        echo "  - package-ecosystem: \"maven\"" >> .github/dependabot.yml
-        echo "    directory: \"/\"" >> .github/dependabot.yml
-        echo "    schedule:" >> .github/dependabot.yml
-        echo "      interval: \"daily\"" >> .github/dependabot.yml
+        echo "  - package-ecosystem: \"maven\"" >> .g
+        echo "    directory: \"/\"" >> .github/depend
+        echo "    schedule:" >> .github/dependabot.ym
+        echo "      interval: \"daily\"" >> .github/d
 
     - name: Run OWASP ZAP
       uses: zaproxy/action-full-scan@v0.4.1
       with:
         target: 'http://localhost:8080'
-        cmd_options: '-a -m 10 -r zap_report.html -J zap_report.json'
+        cmd_options: '-a -m 10 -r zap_report.html -J 
 
     - name: Convert ZAP report to SARIF
       run: |
-        npx zap-to-sarif -i zap_report.json -o zap_report.sarif
+        npx zap-to-sarif -i zap_report.json -o zap_re
 
     - name: Upload ZAP results to GitHub Security
       uses: github/codeql-action/upload-sarif@v2
